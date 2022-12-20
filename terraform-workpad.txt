@@ -1,0 +1,193 @@
+Download & Install Terraform for Windows.
+- Download the terraform ZIP file from Terraform site. Create Folder called Terraform under C:\Programs\
+- Extract the .exe from the ZIP file to a folder eg C:\Programs\Terraform ; copy this path location 'C:\Programs\terraform\'
+- Navigate to Control Panel -> System -> System settings -> Environment Variables
+- In System Variables, select Path > edit > new > Enter the location of the Terraform .exe, eg C:\Programs\Terraform then click OK
+- Open a new CMD/PowerShell and the Terraform command should work
+
+Create Access Key & Secret Access ID from AWS Console under your account name> Security Credentials> Access Keys > Create New Access Key if you have not done already.
+Save the access & Secret keys somewhere safe.
+
+Download & Install AWSCLI from https://awscli.amazonaws.com/AWSCLIV2.msi
+open cmd> run "aws configure" > Enter Access id, Secret Key & Region.
+
+-----------------------------------------
+https://github.com/easyawslearn/Terraform-Tutorial
+
+#Create EC2 instance from AMI using Terraform to test if terraform is properly configured.
+1. create ubuntu t2.micro Instance in ap-south-1 mumbai region with default Security Group> delete existing security group inbound rule & add a new rule which accepts all traffic
+2. create an AMI/Image out of the ubuntu instance > delete the ubuntu ec2 after AMI is created > Copy the AMI ID & paste it in main.tf 'ami' field.
+   ami-04f898236497e3786
+3. Open terraform/practicals/practical-1-first-terraform-project/main.tf from VS Code.
+   Copy & Paste the AMI ID from Step2 under "resource" into the field 'ami'.
+4. On VS Code, click 'New Terminal' from Menu bar & type following commands on terminal working directory path.
+terraform init        ## Initializes Terraform & Download AWS or Cloud provider plugins (whichever cloud provider is mentioned in provider block in main.tf or provider.tf)
+terraform fmt         ##Formats the terraform files according to terraform standards
+terraform validate    ##Outputs a success message if Configuration is correct
+terraform plan        ## Verifies if the code in terraform file (in this example, only main.tf) is correct & if resources & configuration is properly written.
+terraform apply       ## Create Infrastructure, type yes when prompted.
+
+5. Verify on AWS console if the EC2 has been created.
+6. terraform destroy   ## Deletes all the resources created using Terraform
+
+Notice that some files have had been newly created in the project directory after terraform commands were run.
+Terraform creates terraform.state file which stores changes made to cloud infrastructure by Terraform to keep a track of infrastructure changes.
+
+Now if you change the AMI ID in main.tf & Run terraform apply, it will destroy the previous ec2 & create a new ec2 using the new ami because it tracks the changes using state file.
+-----------------------------------------
+# Practical 2: Variables, Ouputs & Count
+explain string interpolation 
+
+open terraform/praticals/practical-2-variables-outputs-count/ directory in VS Code.
+Notice that the variables.tf now has variable block with instance tag details instead of being mentioned in main.tf. This way main.tf does not need to be changed & can be reused with multiple changes to variables.
+var.<variable-name> is used to access the variable value in main.tf
+Theres a new file called outputs.tf which outputs the instance public ips after the terraform apply completes ec2 creation.
+2 ways to use output block: to display output on the terminal after terraform apply or output value can be used by other resources like if resource 1 has not been created & resource 2 need the value of resource 1 later after resource 2 has been created.
+
+sensitive = true  ## when dealing with confidential data which are sentitive in nature like passwords
+
+count = <integer value>  ##Number of EC2 Instances, so in our example, count is set to 3 which means 3 ec2 instances will be created
+Notice the change in outputs.tf instance_public_ip block where value = aws_instance.app_server.*.public_ip, * is being used to loop through 3 instance public ips & display them on the terminal
+terraform init
+terraform plan
+terraform apply
+terraform output  ##Alternative way to see output through command line
+terraform destroy   ##clean up resources which were just created
+-------------------------------------------
+Types of blocks where you define infrastructure requirements
+provider, resource, data, output, variable, module, provisioner, dynamic, local
+
+#Theory- Data block: terraform\github-projects\terraform-course-examples-master\data-sources
+
+user_data: inject configuration data into ec2 during creation like installing tools (git, openjdk, httpd, apache2 etc) or just running a shell command or a script.
+https://github.com/gruntwork-io/intro-to-terraform/blob/master/single-web-server/main.tf
+
+https://github.com/WillBrock/terraform-course-examples
+Modules: packaging existing config into a module to be reused by other projects
+modules can also be uploaded to scm repo & reused from the scm repo by referencing the scm url like github repo or link.
+anything under modules directory can be referenced by other main.tf file resources with the module block.
+-------------------------------------------
+# Practical 3- Modules: open terraform\practicals\practical-3-modules in vs code
+cd dev
+terraform init
+terraform plan
+terraform apply
+------------------------------------------
+# Theory: Type & Values: string, number, bool, list, map
+from VS Code, open terraform\github-projects\terraform-course-examples-master > cd expressions
+
+if else statement with:  foo  = local.baz == "aaa" ? "yes" : "no"
+testing_if = "Hello, %{ if var.name != "" }${var.name}%{ else }unnamed%{ endif }!"
+testing_for_loop = <<EOT
+	%{ for ip in aws_instances.example.*.private_ip }
+      server ${ip}
+	%{ endfor }
+   EOT
+explain map with: value = [for k, v in var.testing : k if k == "foo"]
+
+# Theory - Variables 
+from VS Code, open terraform\github-projects\terraform-course-examples-master
+open terminal> cd variables
+
+# Theory -Resource Meta Attributes
+from VS Code, open terraform\github-projects\terraform-course-examples-master
+open terminal> cd resource-meta-attributes
+__________________________________________
+# Practical 5- Resource Exports & Dependencies: Create VPC, Subnet & EC2
+from VS Code, open terraform\github-projects\terraform-course-examples-master
+open terminal> cd resource-exports-dependency OR cd variables (both directory achieve same objectives) > explain attributes > terraform init > terraform plan > terraform apply 
+------------------------------------------
+# Practical 6- Dynamic Blocks for not repeating code blocks
+from VS Code, open terraform\github-projects\terraform-course-examples-master
+open terminal> cd dynamic-blocks
+terraform init
+terraform plan
+terraform apply
+terraform destroy
+------------------------------------------
+## Pending topics: Provisioner, Wokspaces
+# Pratical 7 - Remote State: terraform state file on remote shared storage instead of storing the state file locally
+from VS Code, open terraform\github-projects\terraform-course-examples-master\remote-state
+create s3 bucket on aws console manually.
+terraform init   ##init command besides downloading cloud provider plugins & initializing the repository also checks for backends like in this case s3 bucket & gives you a prompt to say yes to synchronizing local state with remote state.
+also remote state stores the state on local computers/server memory instead of the hard drive.
+terraform plan & apply
+--------------------------------------------------
+# Theory - Functions: from VS Code, open terraform\github-projects\terraform-course-examples-master\functions
+--------------------------------------------------
+# Theory - Locals: from VS Code, open terraform\github-projects\terraform-course-examples-master\local
+locals {
+    setup_name = "tuts"
+}
+resource {
+  ## use interpolation to reference the local like: "${local.setup_name}-vpc" instead of repeating the same string in different places
+  OR use it like: local.setup_name if local variable doesnt have to combine or merge with a string like the above line.
+}
+--------------------------------------------------
+# Practical 8- Provisioners & Connection block: provisioners is like user_data which allows to run shell commands after resource has been created
+provisioners will only run on the first apply or during destroy, provisioners are not recommended by terraform & has to be used only as a last resort solution.
+connection block can be created inside a provisioner block or outside , both will achieve the same results.
+provisioner-remote exec: optional attribute- on_failure = "fail" OR "continue" as provisioner would destroy the resources if provisioner fails or continue as normal if continue is mentioned
+from VS Code, open terraform\github-projects\terraform-course-examples-master\provisioners
+copy aws key pem file to provisioners folder
+terraform init, plan & apply
+--------------------------------------------------
+# Practical 9- Workspaces: its works like git branches. each workspace stores state file seperately. Its same as working from different directories/folders. So its upto the individual work preferences how they would like to structure thier terraform project, either with directories or workspaces.
+from VS Code, open terraform\github-projects\terraform-course-examples-master\workspaces\
+terraform workspace list  #outputs *default which means theres only the default workspace now
+terraform workspace new prod
+terraform workspace new dev
+terraform workspace list  #outputs 3 workspaces
+terraform workspace show  #shows current workspace
+terraform apply -var-file dev.tfvars
+terraform workspace select prod
+terraform workspace show
+terraform apply -var-file prod.tfvars
+____________________________________________________________________________________________________________________________________________________________________
+#Project: https://learn.hashicorp.com/tutorials/terraform/blue-green-canary-tests-deployments
+create emply directory called project under terraform directory.
+open project folder from VS Code editor & open a new terminal & run the following git commands to initiatialize a empty git repository.
+git init
+now follow the instructions in the above hashicorp link to deploy blue environment
+git branch      ## verify that you are in the main branch
+git branch -r   ## list of all branches
+git checkout add-green-en  ##checkout to add-green-env branch
+cd learn-terraform-advanced-deployments
+terraform plan
+terraform apply  ## Creates green environment
+git checkout feature-flags-deployments
+cd learn-terraform-advanced-deployments
+terraform apply -var 'traffic_distribution=blue-90'
+terraform apply -var 'traffic_distribution=split'
+terraform apply -var 'traffic_distribution=green'
+terraform apply -var 'traffic_distribution=green' -var 'enable_blue_env=false'
+git checkout simulate-v1.2-release
+cd learn-terraform-advanced-deployments
+git branch
+terraform apply -var 'traffic_distribution=green'
+terraform apply -var 'traffic_distribution=green-90'
+terraform apply -var 'traffic_distribution=blue'
+terraform destroy -var 'traffic_distribution=blue'
+------------------------------------------
+# Terraform import, terraform\github-projects\terraform-course-examples-master
+
+create ec2 using terraform
+create ec2 using console
+terraform state list
+#create resource block for instance which needs to be imported
+terraform import aws_instance.<name-of-instance-to-be-imported> <instance-id>
+terraform state list
+terraform destroy --auto-approve
+-----------------------------------------------------------------------------
+# Create before Destroy lifecycle rule: terraform\github-projects\terraform-course-examples-master\resource-meta-attributes
+When Terraform determines it needs to destroy an object and recreate it, the normal behavior will create the new object after the existing one is destroyed. Using this attribute will create the new object first and then destroy the old one. This can help reduce downtime.
+----------------------------------------------------
+https://blog.knoldus.com/meta-arguments-in-terraform/
+
+
+ 
+
+
+
+
+
